@@ -9,9 +9,17 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <stdatomic.h>
 
 #define MAX_CLIENTS 100
 #define BUFFER_SZ 2048
+
+static atomic_uint cli_count = 0;
+static int uid = 10;
+
+void print_ip_addr(struct sockaddr_in addr){
+    printf("%d.%d.%d.%d", addr.sin_addr.s_addr & 0xff, (addr.sin_addr.s_addr & 0xff00) >> 8, (addr.sin_addr.s_addr & 0xff0000) >> 16, (addr.sin_addr.s_addr & 0xff000000) >> 24);
+}
 
 int main(int argc, char **argv){
     if(argc != 2){
@@ -34,7 +42,7 @@ int main(int argc, char **argv){
     serv_addr.sin_addr.s_addr = inet_addr(ip);
     serv_addr.sin_port = htons(port);
 
-    //Sygnały
+    //Signal
     signal(SIGPIPE, SIG_IGN);
 
     if(setsockopt(listenfd, SOL_SOCKET, (SO_REUSEPORT | SO_REUSEADDR), (char*)&option, sizeof(option)) < 0){
@@ -55,6 +63,20 @@ int main(int argc, char **argv){
     }
 
     printf("------- WITAJ NA SERWERZE --------\n");
+
+    //Główna pętla
+    while(1){
+        socklen_t clilen = sizeof(cli_addr);
+        connfd = accept(listenfd, (struct sockaddr*)&cli_addr, &clilen);
+
+        if((cli_count + 1) == MAX_CLIENTS){
+            printf("Osiągnięto limit. Połączenie odrzucone.\n");
+            print_ip_addr(cli_addr);
+            close(connfd);
+            continue;
+        }
+
+    }
 
 
 
