@@ -9,12 +9,14 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <signal.h>
-#include <stdatomic.h>
+#include <atomic>
 
 #define MAX_CLIENTS 100
 #define BUFFER_SZ 2048
 
-static atomic_uint cli_count = 0;
+using namespace std;
+
+static atomic_uint cli_count(0);
 static int uid = 10;
 
 void print_ip_addr(struct sockaddr_in addr){
