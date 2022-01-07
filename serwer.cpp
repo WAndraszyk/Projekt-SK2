@@ -81,7 +81,7 @@ void print_ip_addr(struct sockaddr_in addr){
 void send_message(char* s, int uid){
     pthread_mutex_lock(&clients_mutex);
 
-    for(int i=0; i<MAX_CLIENTS; i++){
+    for(int i=0; i<MAX_CLIENTS; ++i){
         if(clients[i]){
             if(clients[i]->uid != uid){
                 if(write(clients[i]->sockfd, s, strlen(s) < 0)){
@@ -95,6 +95,7 @@ void send_message(char* s, int uid){
     pthread_mutex_unlock(&clients_mutex);
 }
 
+// Obsługa klientów
 void* handle_client(void* arg){
     char buffer[BUFFER_SZ];
     char name[NAME_LEN];
