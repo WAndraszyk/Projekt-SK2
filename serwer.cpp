@@ -84,7 +84,7 @@ void send_message(char* s, int uid){
     for(int i=0; i<MAX_CLIENTS; ++i){
         if(clients[i]){
             if(clients[i]->uid != uid){
-                if(write(clients[i]->sockfd, s, strlen(s) < 0)){
+                if(write(clients[i]->sockfd, s, strlen(s)) < 0){
                     printf("ERROR: blad wysylania wiadomosci\n");
                     break;
                 }
@@ -221,7 +221,6 @@ int main(int argc, char **argv){
         queue_add(cli);
         pthread_create(&tid, NULL, &handle_client, (void*)cli);
 
-        //
         sleep(1);
     }
 
