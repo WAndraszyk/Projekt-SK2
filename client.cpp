@@ -11,12 +11,11 @@
 #include <arpa/inet.h>
 
 #define LENGTH 2048
-#define MAX_NAME_LEN 30
+#define NAME_LEN 32
 
-// Global variables
 bool flag = 0;
 int sockfd = 0;
-char name[MAX_NAME_LEN+2];
+char name[NAME_LEN];
 
 void str_overwrite_stdout() {
   printf("> ");
@@ -40,7 +39,7 @@ void catch_ctrl_c_and_exit(int sig) {
 
 void *send_msg_handler(void*){
     char message[LENGTH] = {};
-    char buffer[LENGTH + MAX_NAME_LEN + 2] = {};
+    char buffer[LENGTH + NAME_LEN] = {};
 
     while(1){
         str_overwrite_stdout();
@@ -56,7 +55,7 @@ void *send_msg_handler(void*){
         }
 
         memset(message, 0, LENGTH);
-        memset(buffer, 0, LENGTH + 32);
+        memset(buffer, 0, LENGTH + NAME_LENGTH);
     }
     catch_ctrl_c_and_exit(2);
 }
@@ -90,36 +89,36 @@ int run(int argc, char **argv){
 
     signal(SIGINT, catch_ctrl_c_and_exit);
 
-    printf("Please enter your name: ");
-    fgets(name, 32, stdin);
+    printf("Podaj nazwe uzytkownika: ");
+    fgets(name, NAME_LENGTH, stdin);
     str_trim_lf(name, strlen(name));
 
 
-    if (strlen(name) > 32 || strlen(name) < 2){
-        printf("Name must be less than 30 and more than 2 characters.\n");
+    if (strlen(name) > NAME_LENGTH || strlen(name) < 2){
+        printf("Nazwa musi zawierac pomiedzy 2, a %d znakow.\n", NAME_LENGTH);
         return EXIT_FAILURE;
     }
 
     struct sockaddr_in server_addr;
 
-    /* Socket settings */
+    /* Ustawianie Socketa */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(ip);
     server_addr.sin_port = htons(port);
 
 
-    // Connect to Server
+    // Laczenie ze serwerem
     int err = connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if (err == -1) {
         printf("ERROR: connect\n");
         return EXIT_FAILURE;
     }
 
-    // Send name
-    send(sockfd, name, 32, 0);
+    // Przesylamy nazwe uzytkownika serwerowi
+    send(sockfd, name, NAME_LENGTH, 0);
 
-    printf("=== WELCOME TO THE CHATROOM ===\n");
+    printf("=== WITAJ W POKOJU ===\n");
 
     pthread_t send_msg_thread;
     if(pthread_create(&send_msg_thread, NULL, &send_msg_handler, NULL) != 0){
@@ -135,7 +134,7 @@ int run(int argc, char **argv){
 
     while (1){
         if(flag){
-            printf("\nBye\n");
+            printf("\nDo zobaczenia!\n");
             break;
         }
     }
