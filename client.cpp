@@ -37,7 +37,7 @@ void catch_ctrl_c_and_exit(int sig) {
     flag = 1;
 }
 
-void *send_msg_handler(void*){
+void *send_msg_handler(void* arg){
     char message[LENGTH] = {};
     char buffer[LENGTH + NAME_LEN] = {};
 
@@ -60,12 +60,12 @@ void *send_msg_handler(void*){
     catch_ctrl_c_and_exit(2);
 }
 
-void *recv_msg_handler(void*){
+void *recv_msg_handler(void* arg){
     char message[LENGTH] = {};
     int receive;
 
     while (1){
-        receive = recv(sockfd, message, LEN, 0);
+        receive = recv(sockfd, message, LENGTH, 0);
 
         if (receive > 0){
             printf("%s", message);
@@ -84,7 +84,7 @@ int main(int argc, char **argv){
         return EXIT_FAILURE;
     }
 
-    char* ip = atos(argv[1]);
+    char* ip = argv[1];
     int port = atoi(argv[2]);
 
     signal(SIGINT, catch_ctrl_c_and_exit);
