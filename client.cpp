@@ -55,7 +55,7 @@ void *send_msg_handler(void*){
         }
 
         memset(message, 0, LENGTH);
-        memset(buffer, 0, LENGTH + NAME_LENGTH);
+        memset(buffer, 0, LENGTH + NAME_LEN);
     }
     catch_ctrl_c_and_exit(2);
 }
@@ -65,7 +65,7 @@ void *recv_msg_handler(void*){
     int receive;
 
     while (1){
-        receive = recv(sockfd, message, LENGTH, 0);
+        receive = recv(sockfd, message, LEN, 0);
 
         if (receive > 0){
             printf("%s", message);
@@ -90,12 +90,12 @@ int main(int argc, char **argv){
     signal(SIGINT, catch_ctrl_c_and_exit);
 
     printf("Podaj nazwe uzytkownika: ");
-    fgets(name, NAME_LENGTH, stdin);
+    fgets(name, NAME_LEN, stdin);
     str_trim_lf(name, strlen(name));
 
 
-    if (strlen(name) > NAME_LENGTH || strlen(name) < 2){
-        printf("Nazwa musi zawierac pomiedzy 2, a %d znakow.\n", NAME_LENGTH);
+    if (strlen(name) > NAME_LEN || strlen(name) < 2){
+        printf("Nazwa musi zawierac pomiedzy 2, a %d znakow.\n", NAME_LEN);
         return EXIT_FAILURE;
     }
 
@@ -116,7 +116,7 @@ int main(int argc, char **argv){
     }
 
     // Przesylamy nazwe uzytkownika serwerowi
-    send(sockfd, name, NAME_LENGTH, 0);
+    send(sockfd, name, NAME_LEN, 0);
 
     printf("=== WITAJ W POKOJU ===\n");
 
