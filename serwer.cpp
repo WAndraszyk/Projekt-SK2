@@ -46,6 +46,27 @@ void str_trim_lf(char* arr, int length){
     }
 }
 
+void send_user_names(){
+    pthread_mutex_lock(&clients_mutex);
+    char usernames[NAME_LEN*(MAX_CLIENTS+1)+12];
+
+    for(int i=0; i<MAX_CLIENTS; i++){
+        if(!clients[i]){
+            continue;
+        }
+        if(i>0) sprintf(usernames, "%s,%s", usernames, clients[i]->name);
+        else sprintf(usernames, "[USERNAMES],%s", clients[i]->name);
+    }
+
+    for(int i=0; i<MAX_CLIENTS; i++){
+        if(!clients[i]){
+            continue;
+        }
+        write(clients[i]->sockfd, usernames, strlen(usernames));
+    }
+    pthread_mutex_unlock(&clients_mutex);
+}
+
 void queue_add(client_t* cl){
     pthread_mutex_lock(&clients_mutex);
 
@@ -78,16 +99,14 @@ void print_ip_addr(struct sockaddr_in addr){
     printf("%d.%d.%d.%d", addr.sin_addr.s_addr & 0xff, (addr.sin_addr.s_addr & 0xff00) >> 8, (addr.sin_addr.s_addr & 0xff0000) >> 16, (addr.sin_addr.s_addr & 0xff000000) >> 24);
 }
 
-void send_message(char* s, int uid){
+void send_message(char* s){
     pthread_mutex_lock(&clients_mutex);
 
     for(int i=0; i<MAX_CLIENTS; ++i){
         if(clients[i]){
-            if(clients[i]->uid != uid){
-                if(write(clients[i]->sockfd, s, strlen(s)) < 0){
-                    printf("ERROR: blad wysylania wiadomosci\n");
-                    break;
-                }
+            if(write(clients[i]->sockfd, s, strlen(s)) < 0){
+                printf("ERROR: blad wysylania wiadomosci\n");
+                break;
             }
         }
     }
@@ -113,7 +132,8 @@ void* handle_client(void* arg){
         strcpy(cli->name, name);
         sprintf(buffer, "%s dolaczyl do serwera\n", cli->name);
         printf("%s", buffer);
-        send_message(buffer, cli->uid);
+        send_user_names();
+        send_message(buffer);
     }
 
     bzero(buffer, BUFFER_SZ);
@@ -127,15 +147,16 @@ void* handle_client(void* arg){
 
         if(receive > 0){
             if(strlen(buffer) > 0){
-                send_message(buffer, cli->uid);
+                send_message(buffer);
                 str_trim_lf(buffer, strlen(buffer));
                 printf("%s -> %s", buffer, cli->name);
             }
         }
         else if(receive = 0 || strcmp(buffer, "exit") == 0){
-            sprintf(buffer, "%s has left\n", cli->name);
+            sprintf(buffer, "%s oposcil serwer\n", cli->name);
             printf("%s", buffer);
-            send_message(buffer, cli->uid);
+            send_message(buffer);
+            send_user_names();
             leave_flag = 1;
         }
         else{

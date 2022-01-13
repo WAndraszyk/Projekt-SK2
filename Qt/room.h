@@ -24,6 +24,7 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class Room; }
 QT_END_NAMESPACE
 
+typedef void * (*THREADFUNCPTR)(void *);
 
 class Room : public QWidget
 {
@@ -45,13 +46,19 @@ private slots:
 
     void on_pushButton_clicked();
 
-    void* recv_msg_handler(void);
+    void on_messageReceived(const QString message);
 
-    static void* helper(void*);
+signals:
+    void messageReceived(const QString message);
 
 private:
     Ui::Room *ui;
 
+    QStringList usernames;
+
+    static void* recv_msg_handler(void *);
+
+    void listUsers();
 };
 
 #endif // ROOM_H
