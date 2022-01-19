@@ -2,7 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "room.h"
+#include "userroom.h"
+#include "ownerroom.h"
 #include "connectionerror.h"
 #include "nameerror.h"
 #include <QVector>
@@ -20,9 +21,12 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_pushButton_clicked();
 
     void on_MainWindow_destroyed();
+
+    void on_hostButton_clicked();
+
+    void on_connectButton_clicked();
 
 private:
     Ui::MainWindow *ui;

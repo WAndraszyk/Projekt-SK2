@@ -29,8 +29,10 @@ typedef void * (*THREADFUNCPTR)(void *);
 class Room : public QWidget
 {
     Q_OBJECT
-    std::string name;
+
     volatile sig_atomic_t flag;
+
+    void listUsers();
 
 public:
     int sockfd;
@@ -44,21 +46,17 @@ private slots:
 
     void on_Room_customContextMenuRequested(const QPoint &pos);
 
-    void on_pushButton_clicked();
-
-    void on_messageReceived(const QString message);
-
 signals:
     void messageReceived(const QString message);
 
-private:
-    Ui::Room *ui;
+protected:
+
+    std::string name;
 
     QStringList usernames;
 
     static void* recv_msg_handler(void *);
 
-    void listUsers();
 };
 
 #endif // ROOM_H

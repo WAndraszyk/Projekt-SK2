@@ -14,20 +14,21 @@ MainWindow::~MainWindow()
 }
 
 
-void MainWindow::on_pushButton_clicked()
+void MainWindow::on_connectButton_clicked()
 {
-    std::string name = ui->inputName->text().toStdString();
+    QString Qname = ui->inputName->text();
 
-    if(name.length()<2){
+    if(Qname.length()<2 || Qname.startsWith("/")){
         NameError* err = new NameError();
         err->show();
         return;
     }
 
+    std::string name = Qname.toStdString();
     QStringList list = ui->inputAddress->text().split(':');
     std::string address = list[0].toStdString();
     int port = list[1].toInt();
-    Room* room = new Room();
+    UserRoom* room = new UserRoom();
     int check = room->connectToServer(address, port, name);
     if(check == 0){
         room->show();
@@ -45,5 +46,34 @@ void MainWindow::on_pushButton_clicked()
 void MainWindow::on_MainWindow_destroyed()
 {
 //    QCoreApplicaton::quit();
+}
+
+
+void MainWindow::on_hostButton_clicked()
+{
+    QString Qname = ui->inputName->text();
+
+    if(Qname.length()<2 || Qname.startsWith("/")){
+        NameError* err = new NameError();
+        err->show();
+        return;
+    }
+
+    std::string name = Qname.toStdString();
+    QStringList list = ui->inputAddress->text().split(':');
+    std::string address = list[0].toStdString();
+    int port = list[1].toInt();
+    OwnerRoom* room = new OwnerRoom();
+    int check = room->connectToServer(address, port, name);
+    if(check == 0){
+        room->show();
+        room->listen();
+        return;
+    }
+    else{
+        ConnectionError* err = new ConnectionError();
+        err->show();
+        return;
+    }
 }
 

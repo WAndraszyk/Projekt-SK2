@@ -18,19 +18,24 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     nameerror.cpp \
-    room.cpp
+    ownerroom.cpp \
+    room.cpp \
+    userroom.cpp
 
 HEADERS += \
     connectionerror.h \
     mainwindow.h \
     nameerror.h \
-    room.h
+    ownerroom.h \
+    room.h \
+    userroom.h
 
 FORMS += \
     connectionerror.ui \
     mainwindow.ui \
     nameerror.ui \
-    room.ui
+    ownerroom.ui \
+    userroom.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

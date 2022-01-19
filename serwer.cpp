@@ -46,24 +46,49 @@ void str_trim_lf(char* arr, int length){
     }
 }
 
-void send_user_names(){
+void send_rem(char name[]){
     pthread_mutex_lock(&clients_mutex);
-    char usernames[NAME_LEN*(MAX_CLIENTS+1)+12];
+    char command[NAME_LEN + 16];
+
+    for(int i = 0; i<MAX_CLIENTS; i++){
+        if(!clients[i]) continue;
+        else{
+            sprintf(command, "/USERS remove %s\n", name);
+            write(clients[i]->sockfd, command, strlen(command));
+        }
+    }
+
+    pthread_mutex_unlock(&clients_mutex);
+}
+
+void send_user_names(int sockfd){         //wysyla nazwy wszystkich uzytkownikow jeden po drugim
+    pthread_mutex_lock(&clients_mutex);
+    char usernames[NAME_LEN + 16];
+    char name[NAME_LEN];
 
     for(int i=0; i<MAX_CLIENTS; i++){
         if(!clients[i]){
             continue;
         }
-        if(i>0) sprintf(usernames, "%s,%s", usernames, clients[i]->name);
-        else sprintf(usernames, "[USERNAMES],%s", clients[i]->name);
+        else{
+            if(sockfd == clients[i]->sockfd) {
+                sprintf(name, "%s", clients[i]->name);
+                continue;
+            }
+            sprintf(usernames, "/USERS add %s\n", clients[i]->name);
+            write(sockfd, usernames, strlen(usernames));
+        }
     }
-
     for(int i=0; i<MAX_CLIENTS; i++){
         if(!clients[i]){
             continue;
         }
-        write(clients[i]->sockfd, usernames, strlen(usernames));
+        else{
+            sprintf(usernames, "/USERS add %s\n", name);
+            write(clients[i]->sockfd, usernames, strlen(usernames));
+        }
     }
+
     pthread_mutex_unlock(&clients_mutex);
 }
 
@@ -118,6 +143,7 @@ void send_message(char* s){
 void* handle_client(void* arg){
     char buffer[BUFFER_SZ];
     char name[NAME_LEN];
+    char sendname[NAME_LEN+16];
     int leave_flag = 0;
     cli_count++;
 
@@ -132,8 +158,10 @@ void* handle_client(void* arg){
         strcpy(cli->name, name);
         sprintf(buffer, "%s dolaczyl do serwera\n", cli->name);
         printf("%s", buffer);
-        send_user_names();
+
         send_message(buffer);
+
+        send_user_names(cli->sockfd);
     }
 
     bzero(buffer, BUFFER_SZ);
@@ -156,7 +184,6 @@ void* handle_client(void* arg){
             sprintf(buffer, "%s oposcil serwer\n", cli->name);
             printf("%s", buffer);
             send_message(buffer);
-            send_user_names();
             leave_flag = 1;
         }
         else{
@@ -171,6 +198,9 @@ void* handle_client(void* arg){
     queue_remove(cli->uid);
     free(cli);
     cli_count--;
+
+    send_rem(name);
+
     pthread_detach(pthread_self());
 
     return NULL;
