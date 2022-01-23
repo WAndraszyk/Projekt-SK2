@@ -1,10 +1,6 @@
 #include "userroom.h"
 #include "ui_userroom.h"
 
-#define LENGTH 2048
-#define NAME_LEN 32
-#define MAX_CLIENTS 100
-
 UserRoom::UserRoom()
 {
     ui = new Ui::UserRoom;
@@ -28,9 +24,9 @@ void UserRoom::on_sendButton_clicked()
 }
 
 void UserRoom::on_messageReceived(const QString message){
-    int check = message.split('\n').length();
+    QStringList list = message.split('\n');
+    int check = list.length();
     if(check>1){
-        QStringList list = message.split('\n');
         for(int i = 0; i<check; i++){
             if(list[i].length()>0)
             on_messageReceived(list[i]);

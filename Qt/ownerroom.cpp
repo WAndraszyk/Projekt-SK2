@@ -1,10 +1,6 @@
 #include "ownerroom.h"
 #include "ui_ownerroom.h"
 
-#define LENGTH 2048
-#define NAME_LEN 32
-#define MAX_CLIENTS 100
-
 OwnerRoom::OwnerRoom()
 {
     ui = new Ui::OwnerRoom;
@@ -27,12 +23,21 @@ void OwnerRoom::on_sendButton_clicked()
 }
 
 void OwnerRoom::on_messageReceived(const QString message){
+    QStringList list = message.split('\n');
+    int check = list.length();
+    if(check>1){
+        for(int i = 0; i<check; i++){
+            if(list[i].length()>0)
+            on_messageReceived(list[i]);
+        }
+        return;
+    }
     if(message.simplified().startsWith("/USERS")){
-        QStringList command = QString(message).split(' ');
-        if(command[1].compare("add")){
+        QStringList command = QString(message).simplified().split(' ');
+        if(command[1].compare("add") == 0){
             addUser(command[2]);
         }
-        else if(command[1].compare("remove")){
+        else if(command[1].compare("remove") == 0){
             removeUser(command[2]);
         }
         return;
@@ -63,6 +68,14 @@ void OwnerRoom::removeUser(QString user){
 
 void OwnerRoom::on_kickButton_clicked()
 {
+    QList kicknames = this->ui->listWidget->selectedItems();
+    for(int i = 0; i<kicknames.length(); i++){
+        char buffer[7 + NAME_LEN] = {};
 
+        sprintf(buffer, "/kick %s\n", kicknames[i]->text().toStdString().c_str());
+        sockets::send(sockfd, buffer, strlen(buffer), 0);
+
+        memset(buffer, 0, 7 + NAME_LEN);
+    }
 }
 

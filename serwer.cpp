@@ -19,6 +19,7 @@ using namespace std;
 
 static atomic_uint cli_count(0);
 static int uid = 10;
+char* ownername;
 
 // Struktura klienta
 typedef struct{
@@ -26,6 +27,8 @@ typedef struct{
     int sockfd;
     int uid;
     char name[NAME_LEN];
+    bool owner;
+    bool kicked = false;
 } client_t;
 
 client_t* clients[MAX_CLIENTS];
@@ -139,6 +142,40 @@ void send_message(char* s){
     pthread_mutex_unlock(&clients_mutex);
 }
 
+void kick_user(char name[NAME_LEN]){
+    pthread_mutex_lock(&clients_mutex);
+    int index = 0;
+
+    for(int i=0; i<MAX_CLIENTS; i++){
+        if(!clients[i]){
+            continue;
+        }
+        else if(strcmp(clients[i]->name, name) == 0){
+            if(clients[i]->owner) return;
+            clients[i]->kicked = true;
+            
+            char buffer[BUFFER_SZ];
+            sprintf(buffer, "/kicked\n");
+            write(clients[i]->sockfd, buffer, strlen(buffer));
+            
+            index = i;
+        }
+    }
+    pthread_mutex_unlock(&clients_mutex);
+
+    close(clients[index]->sockfd);
+    queue_remove(clients[index]->uid);
+
+    free(clients[index]);
+    cli_count--;
+
+    send_rem(name);
+
+    char buffer[BUFFER_SZ];
+    sprintf(buffer, "%s zostal wyrzucony z pokoju\n", name);
+    send_message(buffer);
+}
+
 // Obsługa klientów
 void* handle_client(void* arg){
     char buffer[BUFFER_SZ];
@@ -158,6 +195,8 @@ void* handle_client(void* arg){
         strcpy(cli->name, name);
         sprintf(buffer, "%s dolaczyl do serwera\n", cli->name);
         printf("%s", buffer);
+        if(strcmp(name, ownername) == 0) cli->owner = true;
+        else cli->owner = false;
 
         send_message(buffer);
 
@@ -171,27 +210,41 @@ void* handle_client(void* arg){
             break;
         }
 
+        if(cli->kicked == true) break;
         int receive = recv(cli->sockfd, buffer, BUFFER_SZ, 0);
 
-        if(receive > 0){
+        if(receive > 0 && cli->kicked == false){
             if(strlen(buffer) > 0){
+                if(strncmp(buffer, "/kick ", 6) == 0 && cli->owner == true){
+                    char kickname[NAME_LEN] = {};
+                    sscanf(buffer, "/kick %s", kickname);
+                    kick_user(kickname);
+                    continue;
+                }
                 send_message(buffer);
                 str_trim_lf(buffer, strlen(buffer));
                 printf("%s -> %s", buffer, cli->name);
             }
         }
-        else if(receive = 0 || strcmp(buffer, "exit") == 0){
-            sprintf(buffer, "%s oposcil serwer\n", cli->name);
-            printf("%s", buffer);
-            send_message(buffer);
-            leave_flag = 1;
-        }
         else{
-            printf("ERROR: -1\n");
             leave_flag = 1;
+            if(cli->kicked == true){
+                sprintf(buffer, "Zostales wyrzucony z pokoju!\n");
+            }
         }
 
         bzero(buffer, BUFFER_SZ);
+    }
+
+    sprintf(buffer, "%s opuscil serwer\n", cli->name);
+    printf("%s", buffer);
+    send_message(buffer);
+
+    if(cli->owner){
+        sprintf(buffer, "Wlasciciel opuscil serwer!\n \nPokoj nieczynny.\n");
+        printf("%s", buffer);
+        send_message(buffer);
+        std::exit(EXIT_SUCCESS);
     }
 
     close(cli->sockfd);
@@ -207,13 +260,14 @@ void* handle_client(void* arg){
 }
 
 int main(int argc, char **argv){
-    if(argc != 2){
-        printf("Usage: %s <port>\n", argv[0]);
+    if(argc != 4){
+        printf("Usage: %s <ip> <port> <nazwa_wlasciciela>\n", argv[0]);
         return EXIT_FAILURE;
     }
-
-    char *ip = "127.0.0.1";
-    int port = atoi(argv[1]);
+    
+    char* ip = argv[1];
+    int port = atoi(argv[2]);
+    ownername = argv[3];
 
     int option = 1;
     int listenfd = 0, connfd = 0;

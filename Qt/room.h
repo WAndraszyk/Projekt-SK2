@@ -20,6 +20,10 @@ namespace sockets{
 #include <unistd.h>
 }
 
+#define LENGTH 2048
+#define NAME_LEN 32
+#define MAX_CLIENTS 100
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class Room; }
 QT_END_NAMESPACE
@@ -37,6 +41,8 @@ class Room : public QWidget
 public:
     int sockfd;
     explicit Room(QWidget *parent = nullptr);
+    ~Room();
+
     int connectToServer(std::string, int, std::string);
     void listen();
 
@@ -50,6 +56,8 @@ signals:
     void messageReceived(const QString message);
 
 protected:
+
+    void closeEvent(QCloseEvent *event);
 
     std::string name;
 

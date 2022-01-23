@@ -2,15 +2,20 @@
 #include <QDebug>
 #include <errno.h>
 
-#define LENGTH 2048
-#define NAME_LEN 32
-#define MAX_CLIENTS 100
-
 Room::Room(QWidget *parent)
     : QWidget{parent}
 {
     this->flag = 0;
     this->sockfd = 0;
+}
+
+Room::~Room(){
+    sockets::close(this->sockfd);
+}
+
+void Room::closeEvent(QCloseEvent *event){
+    sockets::close(this->sockfd);
+    QWidget::closeEvent(event);
 }
 
 int Room::connectToServer(std::string ip, int port, std::string name){
