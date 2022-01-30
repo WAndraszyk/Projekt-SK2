@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Nazwa uzytkownika powinna zawierac conajmniej 2 znaki!</string>
+    <string>Nazwa uzytkownika powinna zawierac conajmniej 2 znaki</string>
    </property>
   </widget>
   <widget class="QPushButton" name="pushButton">
@@ -49,6 +49,19 @@
    </property>
    <property name="text">
     <string>OK</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>80</x>
+     <y>50</y>
+     <width>211</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>i nie moze zaczynac sie znakiem &quot;/&quot;</string>
    </property>
   </widget>
  </widget>

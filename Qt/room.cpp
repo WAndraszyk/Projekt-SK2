@@ -1,32 +1,29 @@
 #include "room.h"
-#include "ui_room.h"
 #include <QDebug>
-#include <errno.h>
-
-#define LENGTH 2048
-#define NAME_LEN 32
-#define MAX_CLIENTS 100
-
-struct arg_struct {
-    int *fd;
-    QTextBrowser **ui;
-};
 
 Room::Room(QWidget *parent)
     : QWidget{parent}
 {
     this->flag = 0;
     this->sockfd = 0;
+}
 
-    ui = new Ui::Room;
-    ui->setupUi(this);
-    connect(this, SIGNAL(messageReceived(QString)), this, SLOT(on_messageReceived(QString)));
+Room::~Room(){
+}
+
+void Room::closeEvent(QCloseEvent *event){
+    if(!(this->kicked)){
+        sockets::send(this->sockfd, "/leaving\n", LENGTH, sockets::MSG_NOSIGNAL);
+    }
+    QWidget::closeEvent(event);
+    this->~Room();
 }
 
 int Room::connectToServer(std::string ip, int port, std::string name){
 
     struct sockets::sockaddr_in server_addr;
     this->name = name;
+    this->Qname = QString(name.c_str());
 
     /* Ustawianie Socketa */
     sockfd = sockets::socket(AF_INET, sockets::SOCK_STREAM, 0);
@@ -40,24 +37,20 @@ int Room::connectToServer(std::string ip, int port, std::string name){
     }
 
     // Przesylamy nazwe uzytkownika serwerowi
-    sockets::send(sockfd, name.c_str(), NAME_LEN, 0);
+    sockets::send(sockfd, name.c_str(), NAME_LEN, sockets::MSG_NOSIGNAL);
 
-    char users[NAME_LEN*(MAX_CLIENTS+1)+12] = {};
-
-    check = sockets::recv(sockfd, users, NAME_LEN*(MAX_CLIENTS+1)+12, 0);
-    if (check > 0){
-
-        this->usernames = QString(users).split(',');
-        this->usernames.erase(this->usernames.begin());
-        listUsers();
+    char message[LENGTH] = {};
+    if(sockets::recv(sockfd, message, LENGTH, 0)>0){
+        QString Qmessage = message;
+        if(Qmessage.startsWith("/nametaken")) return -2;
     }
-
+    else return -1;
 
     return 0;
 }
 
 void* Room::recv_msg_handler(void *arguments){
-    char message[NAME_LEN*(MAX_CLIENTS+1)+12] = {};
+    char message[LENGTH] = {};
     int receive = 0;
     Room *args = (Room *)arguments;
     int fd = args->sockfd;
@@ -80,7 +73,6 @@ void* Room::recv_msg_handler(void *arguments){
     }
 }
 
-
 void Room::listen(){
 
 //    char message[LENGTH+NAME_LEN] = {};
@@ -100,50 +92,10 @@ void Room::listen(){
 
 void Room::on_Room_destroyed()
 {
-    char buffer[10 + NAME_LEN] = {};
-    sprintf(buffer, "%s exits!\n", this->name.c_str());
-
-    sockets::send(sockfd, buffer, strlen(buffer),0);
-    sockets::close(sockfd);
 }
 
 
 void Room::on_Room_customContextMenuRequested(const QPoint &pos)
 {
 
-}
-
-
-void Room::on_pushButton_clicked()
-{
-    std::string message = ui->plainTextEdit->toPlainText().toStdString();
-    ui->plainTextEdit->clear();
-
-    char buffer[LENGTH + NAME_LEN] = {};
-
-    sprintf(buffer, "%s: %s\n", this->name.c_str(), message.c_str());
-    sockets::send(sockfd, buffer, strlen(buffer), 0);
-
-    memset(buffer, 0, LENGTH + NAME_LEN);
-}
-
-void Room::on_messageReceived(const QString message){
-    if(message.simplified().startsWith("[USERNAMES],")){
-        this->usernames = QString(message).split(',');
-        this->usernames.erase(this->usernames.begin());
-        listUsers();
-        return;
-    }
-    if(message.simplified().startsWith(this->name.c_str())){
-        this->ui->textBrowser->setTextColor(Qt::red);
-    }
-    else{
-        this->ui->textBrowser->setTextColor(Qt::blue);
-    }
-    this->ui->textBrowser->append(message.simplified());
-}
-
-void Room::listUsers(){
-    this->ui->listWidget->clear();
-    this->ui->listWidget->addItems(this->usernames);
 }

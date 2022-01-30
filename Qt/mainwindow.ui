@@ -52,7 +52,7 @@
      <number>20</number>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="connectButton">
     <property name="geometry">
      <rect>
       <x>170</x>
@@ -62,7 +62,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Connect</string>
+     <string>Dolacz</string>
     </property>
    </widget>
    <widget class="QLabel" name="label">
@@ -97,13 +97,26 @@
      <cstring>inputAddress</cstring>
     </property>
    </widget>
+   <widget class="QPushButton" name="hostButton">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>90</y>
+      <width>80</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Zaloz</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <tabstops>
   <tabstop>inputName</tabstop>
   <tabstop>inputAddress</tabstop>
-  <tabstop>pushButton</tabstop>
+  <tabstop>connectButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>
