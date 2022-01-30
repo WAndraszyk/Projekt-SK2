@@ -34,6 +34,12 @@ void MainWindow::on_connectButton_clicked()
         room->listen();
         return;
     }
+    else if(check == -2){
+        NameError* err = new NameError();
+        err->nameTaken();
+        err->show();
+        return;
+    }
     else{
         ConnectionError* err = new ConnectionError();
         err->show();

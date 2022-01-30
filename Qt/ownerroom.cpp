@@ -9,6 +9,10 @@ OwnerRoom::OwnerRoom()
     connect(this, SIGNAL(messageReceived(QString)), this, SLOT(on_messageReceived(QString)));
 }
 
+OwnerRoom::~OwnerRoom(){
+    delete ui;
+}
+
 void OwnerRoom::on_sendButton_clicked()
 {
     std::string message = ui->plainTextEdit->toPlainText().toStdString();
@@ -23,10 +27,12 @@ void OwnerRoom::on_sendButton_clicked()
 }
 
 void OwnerRoom::on_messageReceived(const QString message){
-    QStringList list = message.split('\n');
-    int check = list.length();
-    if(check>1){
-        for(int i = 0; i<check; i++){
+    if(message.simplified() == ""){
+        return;
+    }
+    if(message.contains('\n')){
+        QStringList list = message.split('\n');
+        for(int i = 0; i<list.length(); i++){
             if(list[i].length()>0)
             on_messageReceived(list[i]);
         }
@@ -42,11 +48,32 @@ void OwnerRoom::on_messageReceived(const QString message){
         }
         return;
     }
-    if(message.simplified().startsWith(this->name.c_str())){
+    if(message.simplified().startsWith("/kick")){
+        QStringList command = QString(message).simplified().split(' ');
         this->ui->textBrowser->setTextColor(Qt::red);
+        this->ui->textBrowser->append(command[1] + " zostal(a) wyrzucony(a) z serwera!");
+        return;
+    }
+    if(message.simplified().startsWith("/join")){
+        QStringList command = QString(message).simplified().split(' ');
+        this->ui->textBrowser->setTextColor(Qt::gray);
+        this->ui->textBrowser->append(command[1] + " dolaczyl do serwera!");
+        return;
+    }
+    if(message.simplified().startsWith("/left")){
+        QStringList command = QString(message).simplified().split(' ');
+        this->ui->textBrowser->setTextColor(Qt::gray);
+        this->ui->textBrowser->append(command[1] + " opuscil serwer!");
+        return;
+    }
+    if(message.simplified().startsWith("/owner")){
+        return;
+    }
+    if(message.simplified().startsWith(this->Qname + ": ")){
+        this->ui->textBrowser->setTextColor(Qt::blue);
     }
     else{
-        this->ui->textBrowser->setTextColor(Qt::blue);
+        this->ui->textBrowser->setTextColor(Qt::black);
     }
     this->ui->textBrowser->append(message.simplified());
 }
@@ -54,16 +81,29 @@ void OwnerRoom::on_messageReceived(const QString message){
 void OwnerRoom::listUsers(){
     this->ui->listWidget->clear();
     this->ui->listWidget->addItems(this->usernames);
+    userInList();
 }
 
 void OwnerRoom::addUser(QString user){
     this->usernames.append(user);
     this->ui->listWidget->addItem(user);
+    userInList();
 }
 
 void OwnerRoom::removeUser(QString user){
     this->usernames.removeAll(user);
     listUsers();
+}
+
+void OwnerRoom::userInList(){
+    for(int i = 0; i < this->ui->listWidget->count(); i++){
+        if(this->ui->listWidget->item(i)->text() == this->Qname){
+            this->ui->listWidget->item(i)->setForeground(Qt::blue);
+        }
+        else{
+            this->ui->listWidget->item(i)->setForeground(Qt::black);
+        }
+    }
 }
 
 void OwnerRoom::on_kickButton_clicked()

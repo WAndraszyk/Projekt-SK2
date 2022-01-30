@@ -22,6 +22,10 @@ private slots:
 
 private:
 
+    ~UserRoom();
+
+    void userInList();
+
     void addUser(QString user);
 
     void removeUser(QString user);
@@ -29,6 +33,9 @@ private:
     void listUsers();
 
     Ui::UserRoom *ui;
+
+    QString owner = "";
+
 };
 
 #endif // USERROOM_H

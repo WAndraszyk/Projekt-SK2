@@ -57,7 +57,7 @@ void send_rem(char name[]){
         if(!clients[i]) continue;
         else{
             sprintf(command, "/USERS remove %s\n", name);
-            write(clients[i]->sockfd, command, strlen(command));
+            send(clients[i]->sockfd, command, strlen(command), MSG_NOSIGNAL);
         }
     }
 
@@ -79,7 +79,7 @@ void send_user_names(int sockfd){         //wysyla nazwy wszystkich uzytkownikow
                 continue;
             }
             sprintf(usernames, "/USERS add %s\n", clients[i]->name);
-            write(sockfd, usernames, strlen(usernames));
+            send(sockfd, usernames, strlen(usernames), MSG_NOSIGNAL);
         }
     }
     for(int i=0; i<MAX_CLIENTS; i++){
@@ -88,7 +88,7 @@ void send_user_names(int sockfd){         //wysyla nazwy wszystkich uzytkownikow
         }
         else{
             sprintf(usernames, "/USERS add %s\n", name);
-            write(clients[i]->sockfd, usernames, strlen(usernames));
+            send(clients[i]->sockfd, usernames, strlen(usernames), MSG_NOSIGNAL);
         }
     }
 
@@ -127,12 +127,24 @@ void print_ip_addr(struct sockaddr_in addr){
     printf("%d.%d.%d.%d", addr.sin_addr.s_addr & 0xff, (addr.sin_addr.s_addr & 0xff00) >> 8, (addr.sin_addr.s_addr & 0xff0000) >> 16, (addr.sin_addr.s_addr & 0xff000000) >> 24);
 }
 
+bool checkIfNameTaken(char name[NAME_LEN]){
+    for(int i = 0; i<MAX_CLIENTS; i++){
+        if(clients[i]){
+            printf("%s", clients[i]->name);
+            if(strcmp(name, clients[i]->name) == 0){
+                return true;            
+            }
+        }
+    }
+    return false;
+}
+
 void send_message(char* s){
     pthread_mutex_lock(&clients_mutex);
 
     for(int i=0; i<MAX_CLIENTS; ++i){
         if(clients[i]){
-            if(write(clients[i]->sockfd, s, strlen(s)) < 0){
+            if(send(clients[i]->sockfd, s, strlen(s), MSG_NOSIGNAL) < 0){
                 printf("ERROR: blad wysylania wiadomosci\n");
                 break;
             }
@@ -153,15 +165,16 @@ void kick_user(char name[NAME_LEN]){
         else if(strcmp(clients[i]->name, name) == 0){
             if(clients[i]->owner) return;
             clients[i]->kicked = true;
-            
-            char buffer[BUFFER_SZ];
-            sprintf(buffer, "/kicked\n");
-            write(clients[i]->sockfd, buffer, strlen(buffer));
-            
+
             index = i;
         }
     }
     pthread_mutex_unlock(&clients_mutex);
+
+    char buffer[BUFFER_SZ];
+    sprintf(buffer, "/kick %s\n", name);
+    printf("%s", buffer);
+    send_message(buffer);
 
     close(clients[index]->sockfd);
     queue_remove(clients[index]->uid);
@@ -170,10 +183,37 @@ void kick_user(char name[NAME_LEN]){
     cli_count--;
 
     send_rem(name);
+}
+
+void leave(char name[NAME_LEN]){
+    pthread_mutex_lock(&clients_mutex);
+    int index = 0;
+
+    for(int i=0; i<MAX_CLIENTS; i++){
+        if(!clients[i]){
+            continue;
+        }
+        else if(strcmp(clients[i]->name, name) == 0){
+            if(clients[i]->owner) return;
+            clients[i]->kicked = true;
+
+            index = i;
+        }
+    }
+    pthread_mutex_unlock(&clients_mutex);
 
     char buffer[BUFFER_SZ];
-    sprintf(buffer, "%s zostal wyrzucony z pokoju\n", name);
+    sprintf(buffer, "/left %s\n", name);
+    printf("%s", buffer);
     send_message(buffer);
+
+    close(clients[index]->sockfd);
+    queue_remove(clients[index]->uid);
+
+    free(clients[index]);
+    cli_count--;
+
+    send_rem(name);
 }
 
 // Obsługa klientów
@@ -192,15 +232,47 @@ void* handle_client(void* arg){
         leave_flag = 1;
     }
     else{
+        if(checkIfNameTaken(name)){;
+            sprintf(buffer, "/nametaken\n");
+            printf("%s", buffer);
+
+            pthread_mutex_lock(&clients_mutex);
+            send(cli->sockfd, buffer, BUFFER_SZ, MSG_NOSIGNAL);
+            pthread_mutex_unlock(&clients_mutex);
+
+            leave_flag = 1; 
+
+            close(cli->sockfd);
+            queue_remove(cli->uid);
+            free(cli);
+            cli_count--;
+
+            pthread_detach(pthread_self());
+
+            return NULL;
+        }
+        else {
+            sprintf(buffer, "/ok\n");
+            printf("%s", buffer);
+            send(cli->sockfd, buffer, BUFFER_SZ, MSG_NOSIGNAL);
+        }
+
         strcpy(cli->name, name);
-        sprintf(buffer, "%s dolaczyl do serwera\n", cli->name);
+        sprintf(buffer, "/join %s\n", cli->name);
         printf("%s", buffer);
-        if(strcmp(name, ownername) == 0) cli->owner = true;
-        else cli->owner = false;
 
         send_message(buffer);
 
+        if(strcmp(name, ownername) == 0) cli->owner = true;
+        else {
+            cli->owner = false;
+        }
+
         send_user_names(cli->sockfd);
+        
+        sprintf(buffer, "/owner %s\n", ownername);
+
+        send(cli->sockfd, buffer, BUFFER_SZ, MSG_NOSIGNAL);
     }
 
     bzero(buffer, BUFFER_SZ);
@@ -218,8 +290,16 @@ void* handle_client(void* arg){
                 if(strncmp(buffer, "/kick ", 6) == 0 && cli->owner == true){
                     char kickname[NAME_LEN] = {};
                     sscanf(buffer, "/kick %s", kickname);
-                    kick_user(kickname);
-                    continue;
+                    if(strcmp(kickname, ownername) == 0) continue;
+                    else{
+                        kick_user(kickname);
+                        continue;
+                    }
+                }
+                else if(strncmp(buffer, "/leaving", 8) == 0){
+                    printf("%s", buffer);
+                    leave_flag = 1;
+                    break;
                 }
                 send_message(buffer);
                 str_trim_lf(buffer, strlen(buffer));
@@ -228,31 +308,24 @@ void* handle_client(void* arg){
         }
         else{
             leave_flag = 1;
-            if(cli->kicked == true){
-                sprintf(buffer, "Zostales wyrzucony z pokoju!\n");
-            }
         }
 
         bzero(buffer, BUFFER_SZ);
     }
 
-    sprintf(buffer, "%s opuscil serwer\n", cli->name);
-    printf("%s", buffer);
-    send_message(buffer);
-
     if(cli->owner){
         sprintf(buffer, "Wlasciciel opuscil serwer!\n \nPokoj nieczynny.\n");
         printf("%s", buffer);
+
+        sprintf(buffer, "/left %s\n", cli->name);
+        printf("%s", buffer);
         send_message(buffer);
+
+        pthread_detach(pthread_self());
         std::exit(EXIT_SUCCESS);
     }
 
-    close(cli->sockfd);
-    queue_remove(cli->uid);
-    free(cli);
-    cli_count--;
-
-    send_rem(name);
+    leave(cli->name);
 
     pthread_detach(pthread_self());
 

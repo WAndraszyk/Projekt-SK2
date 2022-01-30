@@ -1,6 +1,5 @@
 #include "room.h"
 #include <QDebug>
-#include <errno.h>
 
 Room::Room(QWidget *parent)
     : QWidget{parent}
@@ -10,18 +9,21 @@ Room::Room(QWidget *parent)
 }
 
 Room::~Room(){
-    sockets::close(this->sockfd);
 }
 
 void Room::closeEvent(QCloseEvent *event){
-    sockets::close(this->sockfd);
+    if(!(this->kicked)){
+        sockets::send(this->sockfd, "/leaving\n", LENGTH, sockets::MSG_NOSIGNAL);
+    }
     QWidget::closeEvent(event);
+    this->~Room();
 }
 
 int Room::connectToServer(std::string ip, int port, std::string name){
 
     struct sockets::sockaddr_in server_addr;
     this->name = name;
+    this->Qname = QString(name.c_str());
 
     /* Ustawianie Socketa */
     sockfd = sockets::socket(AF_INET, sockets::SOCK_STREAM, 0);
@@ -35,7 +37,14 @@ int Room::connectToServer(std::string ip, int port, std::string name){
     }
 
     // Przesylamy nazwe uzytkownika serwerowi
-    sockets::send(sockfd, name.c_str(), NAME_LEN, 0);
+    sockets::send(sockfd, name.c_str(), NAME_LEN, sockets::MSG_NOSIGNAL);
+
+    char message[LENGTH] = {};
+    if(sockets::recv(sockfd, message, LENGTH, 0)>0){
+        QString Qmessage = message;
+        if(Qmessage.startsWith("/nametaken")) return -2;
+    }
+    else return -1;
 
     return 0;
 }
@@ -83,7 +92,6 @@ void Room::listen(){
 
 void Room::on_Room_destroyed()
 {
-    sockets::close(sockfd);
 }
 
 

@@ -14,6 +14,7 @@ class NameError : public QWidget
 public:
     explicit NameError(QWidget *parent = nullptr);
     ~NameError();
+    void nameTaken();
 
 private slots:
     void on_pushButton_clicked();

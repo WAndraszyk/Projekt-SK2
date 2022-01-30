@@ -24,6 +24,10 @@ private slots:
 
 private:
 
+    ~OwnerRoom();
+
+    void userInList();
+
     void addUser(QString user);
 
     void removeUser(QString user);

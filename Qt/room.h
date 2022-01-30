@@ -61,9 +61,13 @@ protected:
 
     std::string name;
 
+    QString Qname;
+
     QStringList usernames;
 
     static void* recv_msg_handler(void *);
+
+    bool kicked;
 
 };
 
